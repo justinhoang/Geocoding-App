@@ -2,6 +2,8 @@ package com.example.homework4;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -10,6 +12,12 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -19,8 +27,14 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+
+import java.io.IOException;
+import java.security.Key;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {
 
@@ -34,14 +48,70 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private static final int LOCATION_PERMISSIONS_REQUEST_CODE = 1234;
     private FusedLocationProviderClient mFusedLocationProviderClient;
 
+
+    //widgets
+
+    private ImageView mGps;
+    private EditText mSearchText;
+
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
+        mSearchText = (EditText) findViewById(R.id.input_search);
+        mGps = (ImageView) findViewById(R.id.ic_gps);
 
         getLocationPermission();
     }
 
+    private void init(){
+        mSearchText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView textView, int actionId, KeyEvent keyEvent) {
+                if(actionId == EditorInfo.IME_ACTION_SEARCH
+                        || actionId == EditorInfo.IME_ACTION_DONE
+                        || keyEvent.getAction() == KeyEvent.ACTION_DOWN
+                        || keyEvent.getAction() == KeyEvent.KEYCODE_ENTER){
+                    geoLocate();
+                }
+
+                return false;
+            }
+        });
+
+        mGps.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view){
+                getDeviceLocation();
+            }
+        });
+    }
+
+    private void geoLocate(){
+        String searchString = mSearchText.getText().toString();
+        Geocoder geocoder = new Geocoder(MapActivity.this);
+        List<Address> list = new ArrayList<>();
+        try{
+            list = geocoder.getFromLocationName(searchString, 1);
+        }catch(IOException e){
+
+        }
+
+        if(list.size() > 0){
+            Address address = list.get(0);
+
+            Log.d(TAG, "geoLocate: found a location: " + address.toString());
+            Double myLongitude = address.getLongitude();
+            Double myLatitude = address.getLatitude();
+            String myCountryName = address.getCountryName();
+
+            Toast.makeText(this, myLatitude.toString() + myLongitude.toString() + myCountryName, Toast.LENGTH_LONG).show();
+            //Toast.makeText(this, myLongitude.toString().LENGTH_LONG).show();
+            //address.toString
+            moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), DEFAULT_ZOOM, address.getAddressLine(0));
+        }
+    }
 
     private void getDeviceLocation() {
         Log.d(TAG, "getDeviceLocation: getting device current location");
@@ -53,9 +123,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     @Override
                     public void onComplete(@NonNull Task task) {
                         if (task.isSuccessful()) {
-                            Log.d(TAG, "Found location");
                             Location currentLocation = (Location) task.getResult();
-                            moveCamera(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), DEFAULT_ZOOM);
+                            moveCamera(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), DEFAULT_ZOOM,
+                                    "MY Location");
                         } else {
                             Log.d(TAG, "cannot find current location");
                             Toast.makeText(MapActivity.this, "unable to get current location", Toast.LENGTH_SHORT).show();
@@ -68,8 +138,13 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
-    private void moveCamera(LatLng latLng, float zoom) {
+    private void moveCamera(LatLng latLng, float zoom, String title) {
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+
+        MarkerOptions options = new MarkerOptions()
+                .position(latLng)
+                .title(title);
+        mMap.addMarker(options);
     }
 
     private void getLocationPermission() {
@@ -136,6 +211,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             }
             mMap.setMyLocationEnabled(true);
             mMap.getUiSettings().setMyLocationButtonEnabled(false);
+
+            init();
         }
     }
 }
