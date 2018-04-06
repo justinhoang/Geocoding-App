@@ -106,7 +106,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             Double myLatitude = address.getLatitude();
             String myCountryName = address.getCountryName();
 
-            Toast.makeText(this, myLatitude.toString() + myLongitude.toString() + myCountryName, Toast.LENGTH_LONG).show();
+            Toast.makeText(this, myLatitude.toString() + " " + myLongitude.toString() + " " + myCountryName, Toast.LENGTH_LONG).show();
             //Toast.makeText(this, myLongitude.toString().LENGTH_LONG).show();
             //address.toString
             moveCamera(new LatLng(address.getLatitude(), address.getLongitude()), DEFAULT_ZOOM, address.getAddressLine(0));
